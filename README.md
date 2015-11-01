@@ -1,5 +1,14 @@
 # OctoPrint MQTT Plugin
 
+This is a modification of plugin descrited under.
+
+added SSL - TLSv1.1 - can be modificated in source
+ - to use it add "cert: _file_" to config 
+
+added publishing progres of printing
+
+
+-------
 This is an OctoPrint Plugin that adds support for [MQTT](http://mqtt.org/) to OctoPrint.
 
 Out of the box OctoPrint will send all [events](http://docs.octoprint.org/en/devel/events/index.html#available-events)

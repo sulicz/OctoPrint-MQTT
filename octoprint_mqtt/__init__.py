@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 import time
+import ssl
 from collections import deque
 
 import octoprint.plugin
@@ -9,7 +10,8 @@ import octoprint.plugin
 class MqttPlugin(octoprint.plugin.SettingsPlugin,
                  octoprint.plugin.StartupPlugin,
                  octoprint.plugin.ShutdownPlugin,
-                 octoprint.plugin.EventHandlerPlugin):
+                 octoprint.plugin.EventHandlerPlugin,
+                 octoprint.plugin.ProgressPlugin):
 
 	def __init__(self):
 		self._mqtt = None
@@ -66,6 +68,16 @@ class MqttPlugin(octoprint.plugin.SettingsPlugin,
 			data["_event"] = event
 			self.mqtt_publish(topic.format(event=event), json.dumps(data))
 
+			#self._logger.info(topic.format(event="Process"))
+			#if event ==  "FileSelected" : ##"ZChange"
+			#    self.mqtt_publish(topic.format(event="Process"), "test")
+	
+	def on_print_progress(self, storage, path, progress):
+	    #if not self._printer.is_printing():
+	    #self._logger.info(progress)
+	    topic = self._get_topic("event")
+	    self.mqtt_publish(topic.format(event="Progress"), progress)
+	    
 	##~~ helpers
 
 	def mqtt_connect(self):
@@ -76,6 +88,7 @@ class MqttPlugin(octoprint.plugin.SettingsPlugin,
 		broker_username = self._settings.get(["broker", "username"])
 		broker_password = self._settings.get(["broker", "password"])
 		broker_keepalive = self._settings.get_int(["broker", "keepalive"])
+		broker_cert = self._settings.get(["broker", "cert"])
 
 		if broker_url is None:
 			return
@@ -88,12 +101,17 @@ class MqttPlugin(octoprint.plugin.SettingsPlugin,
 		if broker_username is not None:
 			self._mqtt.username_pw_set(broker_username, password=broker_password)
 
+		#moje SSL
+		if broker_cert is not None:
+		    self._mqtt.tls_set(broker_cert, certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_1, ciphers=None)
+
 		self._mqtt.on_connect = self._on_mqtt_connect
 		self._mqtt.on_disconnect = self._on_mqtt_disconnect
 		self._mqtt.on_message = self._on_mqtt_message
 
-		self._mqtt.connect_async(broker_url, broker_port, keepalive=broker_keepalive)
+		self._mqtt.connect(broker_url, broker_port, keepalive=broker_keepalive)
 		self._mqtt.loop_start()
+		
 
 	def mqtt_disconnect(self, force=False):
 		if self._mqtt is None:
